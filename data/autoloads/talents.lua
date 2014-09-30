@@ -15,6 +15,8 @@
 local Entity = require 'engine.Entity'
 local get = util.getval
 
+local phantasm_talents = Talents.talents_types_def['spell/phantasm'].talents
+
 table.merge(Talents:getTalentFromId 'T_ILLUMINATE', {
 		display_entity = Entity.new {image = 'talents/grayswandir_illuminate.png', is_talent = true,},
 		radius = function(self, t)
@@ -96,92 +98,99 @@ table.merge(Talents:getTalentFromId 'T_BLUR_SIGHT', {
 					get(t.evasion_spread, self, t))
 			end,})
 
-table.merge(Talents:getTalentFromId 'T_PHANTASMAL_SHIELD', {
-		name = 'Dancing Lights',
-		display_entity = Entity.new {image = 'talents/grayswandir_dancing_lights.png', is_talent = true,},
-		range = 0,
-		min_radius = 2,
-		max_radius = 4,
-		duration = 3,
-		lite = 2,
-		life = function(self, t)
-			return self:scale {low = 10, high = 150, t, 'spell', synergy = 0.9, after = 'damage',}
-			end,
-		taunt = function(self, t) return self:scale {low = 75, high = 125, t,} end,
-		taunt_power = function(self, t)
-			return self:rescaleCombatStats(
-				0.01 * get(t.taunt, self, t) *
-					self:unscaleCombatStats(self:combatSpellpower()))
-			end,
-		cooldown = 6,
-		no_energy = true,
-		sustain_mana = 10,
-		summon_mana = function(self, t)
-			local base = self:scale {low = 3, high = 1, limit = 0.5, t,}
-			return base * 0.01 * (100 + 2 * self:combatFatigue())
-			end,
-		activate = function(self, t) return {} end,
-		deactivate = function(self, t, p) return true end,
-		callbackOnActBase = function(self, t)
-			local _, _, grids = util.findFreeGrid(
-				self.x, self.y, get(t.max_radius, self, t), true, {[Map.ACTOR] = true,})
-			local min_radius = get(t.min_radius, self, t)
-			local grid
-			while not grid and #grids > 0 do
-				grid = table.remove(grids, rng.range(1, #grids))
-				if grid[3] < min_radius then grid = nil end
-				end
-			if not grid then return end
-			local x, y = unpack(grid)
-			if not x or not y then return end
-			local cost = get(t.summon_mana, self, t)
-			if self:getMana() < 1 + cost then return end
+-- Move phantasmal shield into spell/other.
+local phantasmal_shield = Talents:getTalentFromId 'T_PHANTASMAL_SHIELD'
+phantasmal_shield.type = {'spell/other', 1,}
+table.removeFromList(phantasm_talents, phantasmal_shield)
+table.insert(Talents.talents_types_def['spell/other'].talents, phantasmal_shield)
 
-			local life = get(t.life, self, t)
-			local lite = get(t.lite, self, t)
-			local taunt = get(t.taunt_power, self, t)
-			local light = require('mod.class.NPC').new {
-				name = 'Dancing Light',
-				type = 'elemental', subtype = 'light',
-				color = colors.YELLOW, display = '*', image = 'npc/elemental_light_wisp.png',
-				level_range = {self.level, self.level,},
-				faction = self.faction, summoner = self, summoner_gain_exp = true,
-				summon_time = get(t.duration, self, t) * 1.5,
-				autolevel = 'none', exp_worth = 0,
-				ai = 'summoned', ai_real = 'move_random', movement_speed = 1.5,
-				x = x, y = y,
-				energy = {mod = 1, value = 1000,},
-				lite = lite,
-				levitation = 1, no_breath = 1, poison_immune = 1, cut_immune = 1,
-				disease_immune = 1, stun_immune = 1, blind_immune = 1, knockback_immune = 1,
-				confusion_immune = 1,
-				resists = {LIGHT = 100, DARKNESS = -100,},}
-			light:resolve() light:resolve(nil, true)
-			light.max_life = life
-			light.life = life
-			game.level:addEntity(light)
-			game.zone:addEntity(game.level, light, 'actor', x, y)
-			game.level.map:particleEmitter(x, y, lite, 'summon')
-			light:project({type = 'ball', range = 0, radius = lite,}, light.x, light.y, function(x, y)
-					local target = game.level.map(x, y, Map.ACTOR)
-					if not target or not target.reactionToward or not target.checkHit then return end
-					if target:reactionToward(self) >= 0 then return end
-					if target:checkHit(target:combatMentalResist(), taunt, 0, 95) then return end
-					target:setTarget(light)
-					end)
-			self:incMana(-cost)
-			end,
-		info = function(self, t)
-			return ([[Every turn, summon a #YELLOW#Dancing Light#LAST# to a random space within radius %d to %d. The lights will last for %d turns, have %d #SLATE#[*, spell]#LAST# life and have give off a light of radius %d. When they are summoned, they will taunt #SLATE#[special vs. mind]#LAST# any creatures in their light radius, using %d%% of your spellpower #SLATE#(currently %d)#WHITE#. Each light will cost %.1f mana to summon.]])
-				:format(get(t.min_radius, self, t),
-					get(t.max_radius, self, t),
-					get(t.duration, self, t),
-					get(t.life, self, t),
-					get(t.lite, self, t),
-					get(t.taunt, self, t),
-					get(t.taunt_power, self, t),
-					get(t.summon_mana, self, t))
-			end,})
+newTalent {
+	name = 'Dancing Lights', short_name = 'GRAYSWANDIR_DANCING_LIGHTS',
+	type = {'spell/phantasm', 3,},
+	points = 5,
+	mode = 'sustained',
+	require = phantasmal_shield.require,
+	tactical = {BUFF = 4,},
+	range = 0,
+	min_radius = 2,
+	max_radius = 4,
+	duration = 3,
+	lite = 2,
+	life = function(self, t)
+		return self:scale {low = 10, high = 150, t, 'spell', synergy = 0.9, after = 'damage',}
+		end,
+	taunt = function(self, t) return self:scale {low = 10, high = 40, limit = 55, t,} end,
+	cooldown = 6,
+	no_energy = true,
+	sustain_mana = 10,
+	summon_mana = function(self, t)
+		local base = self:scale {low = 3, high = 1, limit = 0.5, t,}
+		return base * 0.01 * (100 + 2 * self:combatFatigue())
+		end,
+	activate = function(self, t) return {} end,
+	deactivate = function(self, t, p) return true end,
+	callbackOnActBase = function(self, t)
+		local _, _, grids = util.findFreeGrid(
+			self.x, self.y, get(t.max_radius, self, t), true, {[Map.ACTOR] = true,})
+		local min_radius = get(t.min_radius, self, t)
+		local grid
+		while not grid and #grids > 0 do
+			grid = table.remove(grids, rng.range(1, #grids))
+			if grid[3] < min_radius then grid = nil end
+			end
+		if not grid then return end
+		local x, y = unpack(grid)
+		if not x or not y then return end
+		local cost = get(t.summon_mana, self, t)
+		if self:getMana() < 1 + cost then return end
+
+		local life = get(t.life, self, t)
+		local lite = get(t.lite, self, t)
+		local taunt = get(t.taunt, self, t)
+		local apply = self:combatSpellpower()
+		local light = require('mod.class.NPC').new {
+			name = 'Dancing Light',
+			type = 'elemental', subtype = 'light',
+			color = colors.YELLOW, display = '*', image = 'npc/elemental_light_wisp.png',
+			level_range = {self.level, self.level,},
+			faction = self.faction, summoner = self, summoner_gain_exp = true,
+			summon_time = get(t.duration, self, t),
+			autolevel = 'none', exp_worth = 0,
+			ai = 'summoned', ai_real = 'move_random',
+			x = x, y = y,
+			energy = {mod = 1, value = 1000,},
+			lite = lite,
+			levitation = 1, no_breath = 1, poison_immune = 1, cut_immune = 1,
+			disease_immune = 1, stun_immune = 1, blind_immune = 1, knockback_immune = 1,
+			confusion_immune = 1,
+			resists = {LIGHT = 100, DARKNESS = -100,},}
+		light:resolve() light:resolve(nil, true)
+		light:setTarget(self) -- so it moves
+		light.max_life = life
+		light.life = life
+		game.level:addEntity(light)
+		game.zone:addEntity(game.level, light, 'actor', x, y)
+		game.level.map:particleEmitter(x, y, lite, 'summon')
+		light:project({type = 'ball', range = 0, radius = lite,}, light.x, light.y, function(x, y)
+				local target = game.level.map(x, y, Map.ACTOR)
+				if not target or not target.reactionToward or not target.checkHit then return end
+				if target:reactionToward(self) >= 0 then return end
+				if target:checkHit(target:combatMentalResist(), apply, 0, 95) then return end
+				target:setEffect('EFF_GRAYSWANDIR_TAUNTED', 1, {src = light, power = taunt,})
+				end)
+		self:incMana(-cost)
+		end,
+	info = function(self, t)
+		return ([[Every turn, summon a #YELLOW#Dancing Light#LAST# to a random space within radius %d to %d. The lights will last for %d turns, have %d #SLATE#[*, spell]#LAST# life and have give off a light of radius %d. When they are summoned, they will #PINK#taunt#LAST# #SLATE#[spell vs. mind]#LAST# any creatures in their light radius, switching their target to the light. While creatures are #PINK#taunted#LAST#, they will do %d%% less damage to everything but the light. Each light will cost %.1f mana to summon.]])
+			:format(get(t.min_radius, self, t),
+				get(t.max_radius, self, t),
+				get(t.duration, self, t),
+				get(t.life, self, t),
+				get(t.lite, self, t),
+				get(t.taunt, self, t),
+				get(t.summon_mana, self, t))
+		end,}
+phantasm_talents[3], phantasm_talents[4] = phantasm_talents[4], phantasm_talents[3]
 
 table.merge(Talents:getTalentFromId 'T_INVISIBILITY', {
 		name = 'Counter Flare',

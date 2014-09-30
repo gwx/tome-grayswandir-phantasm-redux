@@ -49,7 +49,7 @@ util.load_actions = {
 	object = function(full, base)
 		local f, err = loadfile(full)
 		if err then error(err) end
-		clas:bindHook('Entity:loadList', function(self, data)
+		class:bindHook('Entity:loadList', function(self, data)
 				if data.file ~= '/data/general/objects/'..base or data.loaded[full] then return end
 				self:loadList(full, data.no_default, data.res, data.mod, data.loaded)
 				end)
@@ -65,7 +65,7 @@ util.load_actions = {
 	npc = function(full, base)
 		local f, err = loadfile(full)
 		if err then error(err) end
-		clas:bindHook('Entity:loadList', function(self, data)
+		class:bindHook('Entity:loadList', function(self, data)
 				if data.file ~= '/data/general/npcs/'..base or data.loaded[full] then return end
 				self:loadList(full, data.no_default, data.res, data.mod, data.loaded)
 				end)
