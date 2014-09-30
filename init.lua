@@ -19,7 +19,14 @@ version = {1,2,3,}
 weight = 100
 author = {'grayswandir',}
 homepage = ''
-description = [[Changes around the Spell/Phantasm tree.]]
+description = [[Changes around the Spell/Phantasm tree.
+
+Shadowblades will lose the ability to cast illuminate at will for damage, but they get a few other things to make up for it.
+
+T1 - Illuminate: Light up the area and blind in a big radius.
+T2 - Blur Image: Gives defense, bonus stealth, and projectile evasion.
+T3 - Dancing Lights: Every turn, summon a short-lived light in radius 4. Nearby enemies will be taunted by it, changing their target and making the deal less damage to other things while the light is alive.
+T4 - Counter Flare: Whenever you lose a damage shield or break stealth, cast illuminate. This illuminate will also deal damage equal to a % of the damage shield's power or your stealth.]]
 tags = {'tree', 'talent', 'magic', 'mage', 'spell', 'phantasm', 'light', 'archmage', 'shadowblade', 'redux',}
 
 overload = true
