@@ -42,7 +42,7 @@ class:bindHook('DamageProjector:base', function(self, data)
 		local Map = require 'engine.Map'
 		local target = game.level.map(data.x, data.y, Map.ACTOR)
 		if not target then return end
-		local taunted = data.src:hasEffect 'EFF_GRAYSWANDIR_TAUNTED'
+		local taunted = data.src.hasEffect and data.src:hasEffect 'EFF_GRAYSWANDIR_TAUNTED'
 		if taunted and taunted.src ~= target then
 			data.dam = data.dam * 0.01 * (100 - taunted.power)
 			end

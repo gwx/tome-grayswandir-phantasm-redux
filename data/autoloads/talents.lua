@@ -208,7 +208,7 @@ table.merge(Talents:getTalentFromId 'T_INVISIBILITY', {
 			end,
 		callbackOnLoseShield = function(self, t, shield)
 			local power = self.damage_shield_absorb_max * 0.01 * self:callTalent('T_INVISIBILITY', 'shield_pct')
-			self:callTalent('T_INVISBILITY', 'trigger', power)
+			self:callTalent('T_INVISIBILITY', 'trigger', power)
 			end,
 		info = function(self, t)
 			return ([[Whenever you lose a damage shield or break stealth, cast Illuminate, without affecting its cooldown. In addition, that illuminate will also deal #YELLOW#light#LAST# damage equal to %d%% #SLATE#[*]#LAST# of the lost shield's maximum value or %d%% #SLATE#[*]#LAST# of your stealth power.]])
