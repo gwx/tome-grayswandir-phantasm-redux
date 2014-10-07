@@ -48,9 +48,9 @@ table.merge(Talents:getTalentFromId 'T_ILLUMINATE', {
 						end
 					if damage then self:projectOn(actor, 'LIGHT', damage) end
 					end)
-			game.level.map:particleEmitter(self.x, self.y, tg.radius, 'sunburst', {
-					radius = tg.radius, tx = self.x, ty = self.y, max_alpha = 80,})
 			game:playSoundNear(self, 'talents/heal')
+			game.level.map:particleEmitter(self.x, self.y, tg.radius, 'grayswandir-illuminate', {
+					radius = tg.radius, tx = self.x, ty = self.y,})
 			return true
 			end,
 		info = function(self, t)
@@ -114,22 +114,45 @@ newTalent {
 	range = 0,
 	min_radius = 2,
 	max_radius = 4,
-	duration = 3,
-	lite = 2,
+	duration = 5,
+	lite = 3,
 	life = function(self, t)
-		return self:scale {low = 10, high = 150, t, 'spell', synergy = 0.9, after = 'damage',}
+		return self:scale {low = 10, high = 210, t, 'spell', synergy = 0.9, after = 'damage',}
 		end,
-	taunt = function(self, t) return self:scale {low = 10, high = 40, limit = 55, t,} end,
+	taunt = function(self, t) return self:scale {low = 24, high = 32, limit = 40, t,} end,
 	cooldown = 6,
 	no_energy = true,
 	sustain_mana = 10,
-	summon_mana = function(self, t)
-		local base = self:scale {low = 3, high = 1, limit = 0.5, t,}
-		return base * 0.01 * (100 + 2 * self:combatFatigue())
+	summon_mana = 1,
+	summon_rate = function(self, t)
+		return math.max(1, self:scale {low = 3, high = 1.5, limit = 0.5, t,})
 		end,
-	activate = function(self, t) return {} end,
+	activate = function(self, t) return {counter = 0,} end,
 	deactivate = function(self, t, p) return true end,
 	callbackOnActBase = function(self, t)
+		-- Increment rate.
+		local p = self:isTalentActive(t.id)
+		p.counter = p.counter + 1
+		local rate = get(t.summon_rate, self, t)
+		if p.counter < rate then return end
+
+		-- Check for visible enemies.
+		local enemies = false
+		for actor, info in pairs(self.fov.actors) do
+			if self:reactionToward(actor) < 0 and self:canSee(actor) then
+				enemies = true
+				break end end
+
+		-- If no enemies, limit to the actual rate and break.
+		if not enemies then
+			if p.counter > rate then p.counter = rate end
+			return end
+
+		-- Check mana cost.
+		local cost = get(t.summon_mana, self, t)
+		if self:getMana() < 1 + cost then return end
+
+		-- Find valid position.
 		local _, _, grids = util.findFreeGrid(
 			self.x, self.y, get(t.max_radius, self, t), true, {[Map.ACTOR] = true,})
 		local min_radius = get(t.min_radius, self, t)
@@ -141,8 +164,10 @@ newTalent {
 		if not grid then return end
 		local x, y = unpack(grid)
 		if not x or not y then return end
-		local cost = get(t.summon_mana, self, t)
-		if self:getMana() < 1 + cost then return end
+
+		-- Actual summoning.
+		p.counter = p.counter - rate
+		self:incMana(-cost)
 
 		local life = get(t.life, self, t)
 		local lite = get(t.lite, self, t)
@@ -170,7 +195,6 @@ newTalent {
 		light.life = life
 		game.level:addEntity(light)
 		game.zone:addEntity(game.level, light, 'actor', x, y)
-		game.level.map:particleEmitter(x, y, lite, 'summon')
 		light:project({type = 'ball', range = 0, radius = lite,}, light.x, light.y, function(x, y)
 				local target = game.level.map(x, y, Map.ACTOR)
 				if not target or not target.reactionToward or not target.checkHit then return end
@@ -178,11 +202,17 @@ newTalent {
 				if target:checkHit(target:combatMentalResist(), apply, 0, 95) then return end
 				target:setEffect('EFF_GRAYSWANDIR_TAUNTED', 1, {src = light, power = taunt,})
 				end)
-		self:incMana(-cost)
+		game.level.map:particleEmitter(x, y, lite, 'grayswandir-illuminate', {
+				radius = lite, tx = self.x, ty = self.y, alpha_mult = 0.3})
+		end,
+	iconOverlay = function(self, t, p)
+		return tostring(get(t.summon_rate, self, t) - p.counter), 'buff_font_small'
 		end,
 	info = function(self, t)
-		return ([[Every turn, summon a #YELLOW#Dancing Light#LAST# to a random space within radius %d to %d. The lights will last for %d turns, have %d #SLATE#[*, spell]#LAST# life and have give off a light of radius %d. When they are summoned, they will #PINK#taunt#LAST# #SLATE#[spell vs. mind]#LAST# any creatures in their light radius, switching their target to the light. While creatures are #PINK#taunted#LAST#, they will do %d%% less damage to everything but the light. Each light will cost %.1f mana to summon.]])
-			:format(get(t.min_radius, self, t),
+		return ([[Every %.1f #SLATE#[*]#LAST# turns, summon a #YELLOW#Dancing Light#LAST# to a random space within radius %d to %d. The lights will last for %d turns, have %d #SLATE#[*, spell]#LAST# life and have give off a light of radius %d. When they are summoned, they will #PINK#taunt#LAST# #SLATE#[spell vs. mind]#LAST# any creatures in their light radius, switching their target to the light. While creatures are #PINK#taunted#LAST#, they will do %d%% #SLATE#[*]#LAST# less damage to everything but the light. Each light will cost %.1f mana to summon. This will not summon lights if no enemies are visible. The sustain icon will display how many turns it is until another light is summoned.]])
+			:format(
+				get(t.summon_rate, self, t),
+				get(t.min_radius, self, t),
 				get(t.max_radius, self, t),
 				get(t.duration, self, t),
 				get(t.life, self, t),
