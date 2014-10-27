@@ -116,7 +116,7 @@ newTalent {
 	max_radius = 4,
 	duration = 5,
 	lite = 3,
-	life = function(self, t)
+	light_life = function(self, t)
 		return self:scale {low = 10, high = 210, t, 'spell', synergy = 0.9, after = 'damage',}
 		end,
 	taunt = function(self, t) return self:scale {low = 24, high = 32, limit = 40, t,} end,
@@ -169,7 +169,7 @@ newTalent {
 		p.counter = p.counter - rate
 		self:incMana(-cost)
 
-		local life = get(t.life, self, t)
+		local life = get(t.light_life, self, t)
 		local lite = get(t.lite, self, t)
 		local taunt = get(t.taunt, self, t)
 		local apply = self:combatSpellpower()
@@ -217,7 +217,7 @@ newTalent {
 				get(t.min_radius, self, t),
 				get(t.max_radius, self, t),
 				get(t.duration, self, t),
-				get(t.life, self, t),
+				get(t.light_life, self, t),
 				get(t.lite, self, t),
 				get(t.taunt, self, t),
 				get(t.summon_mana, self, t))
