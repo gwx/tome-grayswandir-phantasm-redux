@@ -36,8 +36,20 @@ util.dir_actions = {
 	ai = function(filename) require('engine.interface.ActorAI'):loadDefinition(filename) end,
 	achievements = function(filename) require('engine.interface.WorldAchievements'):loadDefinition(filename) end,
 	objects = 'object',
+	encounters = 'encounter',
 	egos = 'ego',
 	npcs = 'npc',}
+
+local entity_list = function(directory)
+	if directory:sub(-1) ~= '/' then directory = directory .. '/' end
+	return function(full, base)
+		local f, err = loadfile(full)
+		if err then error(err) end
+		class:bindHook('Entity:loadList', function(self, data)
+				if data.file ~= directory..base or data.loaded[full] then return end
+				self:loadList(full, data.no_default, data.res, data.mod, data.loaded)
+				end)
+		end end
 
 util.load_actions = {
 	birth = function(filename) require('engine.Birther'):loadDefinition(filename) end,
@@ -46,30 +58,10 @@ util.load_actions = {
 	lore = function(filename) require('mod.class.interface.PartyLore'):loadDefinition(filename) end,
 	damage_type = function(filename) require('engine.DamageType'):loadDefinition(filename) end,
 	autolevel = function(filename) require('engine.Autolevel'):loadDefinition(filename) end,
-	object = function(full, base)
-		local f, err = loadfile(full)
-		if err then error(err) end
-		class:bindHook('Entity:loadList', function(self, data)
-				if data.file ~= '/data/general/objects/'..base or data.loaded[full] then return end
-				self:loadList(full, data.no_default, data.res, data.mod, data.loaded)
-				end)
-		end,
-	ego = function(full, base)
-		local f, err = loadfile(full)
-		if err then error(err) end
-		class:bindHook('Entity:loadList', function(self, data)
-				if data.file ~= '/data/general/objects/egos/'..base or data.loaded[full] then return end
-				self:loadList(full, data.no_default, data.res, data.mod, data.loaded)
-				end)
-		end,
-	npc = function(full, base)
-		local f, err = loadfile(full)
-		if err then error(err) end
-		class:bindHook('Entity:loadList', function(self, data)
-				if data.file ~= '/data/general/npcs/'..base or data.loaded[full] then return end
-				self:loadList(full, data.no_default, data.res, data.mod, data.loaded)
-				end)
-		end,}
+	object = entity_list '/data/general/objects/',
+	ego = entity_list '/data/general/objects/egos/',
+	npc = entity_list '/data/general/npcs/',
+	encounter = entity_list '/data/general/encounters/',}
 
 util.file_actions = {
 	['birth.lua'] = 'birth',
