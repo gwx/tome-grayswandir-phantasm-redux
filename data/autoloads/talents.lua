@@ -20,7 +20,7 @@ local phantasm_talents = Talents.talents_types_def['spell/phantasm'].talents
 table.merge(Talents:getTalentFromId 'T_ILLUMINATE', {
 		display_entity = Entity.new {image = 'talents/grayswandir_illuminate.png', is_talent = true,},
 		radius = function(self, t)
-			return self:scale {low = 3, high = 9, t, after = 'ceil',}
+			return math.max(2, self:scale {low = 3, high = 9, t, after = 'ceil',})
 			end,
 		target = function(self, t)
 			return {type = 'ball', talent = t, selffire = false,
