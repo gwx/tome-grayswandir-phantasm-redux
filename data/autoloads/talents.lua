@@ -201,6 +201,8 @@ newTalent {
 				if target:reactionToward(self) >= 0 then return end
 				if target:checkHit(target:combatMentalResist(), apply, 0, 95) then return end
 				target:setEffect('EFF_GRAYSWANDIR_TAUNTED', 1, {src = light, power = taunt,})
+				if target:checkHit(target:combatMentalResist(), apply - 20, 0, 95) then return end
+				target:setTarget(light)
 				end)
 		game.level.map:particleEmitter(x, y, lite, 'grayswandir-illuminate', {
 				radius = lite, tx = self.x, ty = self.y, alpha_mult = 0.3})
@@ -209,7 +211,7 @@ newTalent {
 		return tostring(get(t.summon_rate, self, t) - p.counter), 'buff_font_small'
 		end,
 	info = function(self, t)
-		return ([[Every %.1f #SLATE#[*]#LAST# turns, summon a #YELLOW#Dancing Light#LAST# to a random space within radius %d to %d. The lights will last for %d turns, have %d #SLATE#[*, spell]#LAST# life and have give off a light of radius %d. When they are summoned, they will #PINK#taunt#LAST# #SLATE#[spell vs. mind]#LAST# any creatures in their light radius, switching their target to the light. While creatures are #PINK#taunted#LAST#, they will do %d%% #SLATE#[*]#LAST# less damage to everything but the light. Each light will cost %.1f mana to summon. This will not summon lights if no enemies are visible. The sustain icon will display how many turns it is until another light is summoned.]])
+		return ([[Every %.1f #SLATE#[*]#LAST# turns, summon a #YELLOW#Dancing Light#LAST# to a random space within radius %d to %d. The lights will last for %d turns, have %d #SLATE#[*, spell]#LAST# life and have give off a light of radius %d. When they are summoned, they will #PINK#taunt#LAST# #SLATE#[spell vs. mind]#LAST# any creatures in their light radius, causing them to do %d%% #SLATE#[*]#LAST# less damage to everything but the light. Taunted creatures may also switch their target #SLATE#[spell vs. mind]#LAST# to the light, but this check is made with a full tier less spellpower. Each light will cost %.1f mana to summon. This will not summon lights if no enemies are visible. The sustain icon will display how many turns it is until another light is summoned.]])
 			:format(
 				get(t.summon_rate, self, t),
 				get(t.min_radius, self, t),

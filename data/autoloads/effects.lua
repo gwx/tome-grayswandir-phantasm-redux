@@ -29,7 +29,6 @@ newEffect {
 		return '#Target# is no longer taunted.', '-Taunted'
 		end,
 	activate = function(self, eff)
-		self:setTarget(eff.src)
 		eff.power = util.bound(eff.power, 0, 100)
 		end,
 	deactivate = function(self, eff) end,
