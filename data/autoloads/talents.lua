@@ -229,22 +229,33 @@ table.merge(Talents:getTalentFromId 'T_INVISIBILITY', {
 		display_entity = Entity.new {image = 'talents/grayswandir_counter_flare.png', is_talent = true,},
 		sustain_mana = 35,
 		cooldown = 24,
-		shield_pct = function(self, t) return self:scale {low = 0, high = 70, t,} end,
-		stealth_pct = function(self, t) return self:scale {low = 0, high = 165, t,} end,
+		shield_pct = function(self, t) return self:scale {low = 0, high = 100, t,} end,
+		stealth_pct = function(self, t) return self:scale {low = 0, high = 300, t,} end,
+		tier_size = function(self, t) return self:scale {low = 125, high = 250, limit = 300, t, 'u.spell',} end,
 		activate = function(self, t) return {} end,
 		deactivate = function(self, t, p) return true end,
 		trigger = function(self, t, power)
-			self:attr('grayswandir_illuminate_damage', power)
+			-- Calculate damage. Follows saves progression, treating spellpower as tier size.
+			local damage = 0
+			local div = 1
+			local tier = get(t.tier_size, self, t)
+			while power > 0 do
+				damage = damage + math.min(tier, power) / div
+				power = power - tier
+				div = div + 1
+				end
+
+			self:attr('grayswandir_illuminate_damage', damage)
 			self:forceUseTalent('T_ILLUMINATE', {ignore_energy = true, ignore_cd = true,})
-			self:attr('grayswandir_illuminate_damage', -power)
+			self:attr('grayswandir_illuminate_damage', -damage)
 			end,
 		callbackOnLoseShield = function(self, t, shield)
 			local power = self.damage_shield_absorb_max * 0.01 * self:callTalent('T_INVISIBILITY', 'shield_pct')
 			self:callTalent('T_INVISIBILITY', 'trigger', power)
 			end,
 		info = function(self, t)
-			return ([[Whenever you lose a damage shield or break stealth, cast Illuminate, without affecting its cooldown. In addition, that illuminate will also deal #YELLOW#light#LAST# damage equal to %d%% #SLATE#[*]#LAST# of the lost shield's maximum value or %d%% #SLATE#[*]#LAST# of your stealth power.]])
-				:format(get(t.shield_pct, self, t), get(t.stealth_pct, self, t))
+			return ([[Whenever you lose a damage shield or break stealth, cast Illuminate, without affecting its cooldown. In addition, that illuminate will also deal #YELLOW#light#LAST# damage equal to %d%% #SLATE#[*]#LAST# of the lost shield's maximum value or %d%% #SLATE#[*]#LAST# of your stealth power, up to %d #SLATE#[*, spell]#LAST#. Stronger powers will still increase the damage, but more slowly.]])
+				:format(get(t.shield_pct, self, t), get(t.stealth_pct, self, t), get(t.tier_size, self, t))
 			end,})
 
 local stealth = Talents:getTalentFromId 'T_STEALTH'
