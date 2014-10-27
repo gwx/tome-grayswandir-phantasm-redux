@@ -11,8 +11,20 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-__loading_addon = 'grayswandir-phantasm-redux'
+----------------------------------------------------------------
+-- Magic to find the current addon name.
+local index = 1
+local name, value
+while true do
+	name, value = debug.getlocal(3, index)
+	if not name then
+		error 'Could not find current addon name.'
+	elseif 'dir' == name then
+		__loading_addon = value:sub(8) -- strip off '/hooks/'
+		break
+	else
+		index = index + 1
+		end	end
 
 ----------------------------------------------------------------
 -- Libs System v1
